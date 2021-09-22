@@ -1,17 +1,40 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class Bird : MonoBehaviour
 {
-    public enum BirdState { Idle, Thrown }
+    public enum BirdState { Idle, Thrown, HitSomething }
     public GameObject Parent;
     public Rigidbody2D RigidBody;
     public CircleCollider2D Collider;
 
+    public UnityAction OnBirdDestroyed = delegate { };
+    public UnityAction<Bird> OnBirdShot = delegate { };
+
+    public BirdState State { get { return _state; } }
+
     private BirdState _state;
     private float _minVelocity = 0.05f;
     private bool _flagDestroy = false;
+
+    public virtual void OnTap()
+    {
+        //Do nothing
+    }
+
+
+    void OnDestroy()
+    {
+        if (_state == BirdState.Thrown || _state == BirdState.HitSomething)
+            OnBirdDestroyed();
+    }
+
+    void OnCollisionEnter2D(Collision2D col)
+    {
+        _state = BirdState.HitSomething;
+    }
 
     void Start()
     {
@@ -28,7 +51,7 @@ public class Bird : MonoBehaviour
             _state = BirdState.Thrown;
         }
 
-        if (_state == BirdState.Thrown &&
+        if ((_state == BirdState.Thrown || _state == BirdState.HitSomething) &&
             RigidBody.velocity.sqrMagnitude < _minVelocity &&
             !_flagDestroy)
         {
@@ -57,6 +80,7 @@ public class Bird : MonoBehaviour
         Collider.enabled = true;
         RigidBody.bodyType = RigidbodyType2D.Dynamic;
         RigidBody.velocity = velocity * speed * distance;
+        OnBirdShot(this);
 
     }
 
